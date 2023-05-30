@@ -165,4 +165,25 @@ mod tests {
 
         // println!("{:#?}", trie.root);
     }
+
+    #[test]
+    fn insert_iter_test() {
+        let mut trie = Trie::new();
+        let words = ["coal", "cat", "cam", "calm", "cut", "camp"];
+        for w in words.iter() {
+            trie.insert_iter(*w);
+        }
+
+        for w in words.iter() {
+            assert!(trie.contains(*w), "should contain \"{}\"", &w);
+        }
+
+        trie.delete("cat");
+        assert_eq!(trie.contains("cat"), false);
+        assert_eq!(trie.contains("calm"), true);
+
+        trie.delete("camp");
+        assert_eq!(trie.contains("camp"), false);
+        assert_eq!(trie.contains("calm"), true);
+    }
 }
