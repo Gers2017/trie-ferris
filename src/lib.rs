@@ -54,24 +54,22 @@ impl Trie {
     }
 
     pub fn insert(&mut self, word: &str) {
-        let word: Vec<_> = word.chars().collect();
         let node = &mut self.root;
-        Trie::insert_rec(node, &word, 0);
+        let word = word.chars();
+        Trie::insert_rec(node, word);
     }
 
-    fn insert_rec(node: &mut TNode, word: &[char], depth: usize) {
-        if depth >= word.len() {
-            return;
+    fn insert_rec(node: &mut TNode, mut word: std::str::Chars<'_>) {
+        if let Some(current_ch) = word.next() {
+            let next_node = node
+                .children
+                .entry(current_ch)
+                .or_insert_with(|| TNode::new(current_ch, false));
+
+            Trie::insert_rec(next_node, word);
+        } else {
+            node.is_end = true;
         }
-
-        let current = word[depth];
-
-        let next_node = node.children.entry(current).or_insert_with(|| {
-            let is_end = depth == word.len() - 1;
-            TNode::new(current, is_end)
-        });
-
-        Trie::insert_rec(next_node, word, depth + 1);
     }
 
     pub fn contains(&mut self, word: &str) -> bool {
