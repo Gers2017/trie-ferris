@@ -5,3 +5,4 @@ edition = "2021"
 license = "BSD-3-Clause"
 
 [dependencies]
+fxhash = "0.2.1"

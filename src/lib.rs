@@ -1,10 +1,13 @@
+use fxhash::FxBuildHasher;
 use std::collections::HashMap;
+
+type FxHashMap<K, V> = HashMap<K, V, FxBuildHasher>;
 
 #[derive(Debug)]
 pub struct TNode {
     pub value: char,
     pub is_end: bool,
-    pub children: HashMap<char, TNode>,
+    pub children: FxHashMap<char, TNode>,
 }
 
 impl TNode {
@@ -138,17 +141,17 @@ impl Trie {
     }
 
     fn deleto_rec(node: &mut TNode, mut word: std::str::Chars<'_>) -> bool {
-        let maybe_next = word
-            .next()
-            .and_then(|c| node.get_mut(&c).and_then(|next| Some((c, next))));
+        if let Some(current_ch) = word.next() {
+            if let Some(next_node) = node.get_mut(&current_ch) {
+                if Self::deleto_rec(next_node, word) {
+                    // post traversal
+                    node.children.remove(&current_ch);
+                }
 
-        if let Some((current_ch, next_node)) = maybe_next {
-            if Self::deleto_rec(next_node, word) {
-                // post traversal
-                node.children.remove(&current_ch);
+                return node.is_empty();
             }
 
-            return node.is_empty();
+            return false;
         }
 
         if node.is_end {
