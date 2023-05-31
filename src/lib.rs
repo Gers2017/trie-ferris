@@ -102,6 +102,15 @@ impl Trie {
         Self::delete_rec(node, &word, 0);
     }
 
+    pub fn delete_2(&mut self, word: &str) {
+        if word.is_empty() {
+            return;
+        }
+
+        let word = word.chars();
+        Self::deleto_rec(&mut self.root, word);
+    }
+
     fn delete_rec(node: &mut TNode, word: &[char], depth: usize) -> bool {
         if depth > word.len() {
             return false;
@@ -112,30 +121,41 @@ impl Trie {
                 node.is_end = false;
             }
 
-            if node.is_empty() {
-                return true; // delete key
-            }
-
-            return false;
+            return node.is_empty();
         }
 
         let current = word[depth];
 
-        if !node.has(&current) {
-            return false;
-        }
+        if let Some(next) = node.get_mut(&current) {
+            if Self::delete_rec(next, word, depth + 1) {
+                node.children.remove(&current);
+            }
 
-        let next = node.get_mut(&current).unwrap();
-
-        if Self::delete_rec(next, word, depth + 1) {
-            node.children.remove(&current);
-        }
-
-        if node.is_empty() {
-            return true; // delete key
+            return node.is_empty();
         }
 
         false
+    }
+
+    fn deleto_rec(node: &mut TNode, mut word: std::str::Chars<'_>) -> bool {
+        let maybe_next = word
+            .next()
+            .and_then(|c| node.get_mut(&c).and_then(|next| Some((c, next))));
+
+        if let Some((current_ch, next_node)) = maybe_next {
+            if Self::deleto_rec(next_node, word) {
+                // post traversal
+                node.children.remove(&current_ch);
+            }
+
+            return node.is_empty();
+        }
+
+        if node.is_end {
+            node.is_end = false;
+        }
+
+        node.is_empty()
     }
 
     pub fn clear(&mut self) {
@@ -192,5 +212,20 @@ mod tests {
             assert_eq!(trie.contains(*w), false);
         }
         // println!("{:#?}", trie.root);
+    }
+
+    #[test]
+    fn test_deleto() {
+        let mut trie_me = Trie::new();
+
+        trie_me.insert_iter("null");
+        trie_me.insert_iter("none");
+        trie_me.insert_iter("nope");
+        trie_me.insert_iter("nine");
+
+        trie_me.delete_2("null");
+        trie_me.delete_2("none");
+        assert_eq!(trie_me.contains("null"), false);
+        assert_eq!(trie_me.contains("none"), false);
     }
 }
