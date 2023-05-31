@@ -16,7 +16,7 @@ impl TNode {
         }
     }
 
-    pub fn get(&mut self, key: &char) -> Option<&mut TNode> {
+    pub fn get_mut(&mut self, key: &char) -> Option<&mut TNode> {
         self.children.get_mut(key)
     }
 
@@ -41,19 +41,29 @@ impl Trie {
     }
 
     pub fn insert_iter(&mut self, word: &str) {
+        if word.is_empty() {
+            return;
+        }
+
         let mut node = &mut self.root;
 
-        for (i, current) in word.chars().enumerate() {
-            let next_node = node.children.entry(current).or_insert_with(|| {
-                let is_end = i == word.len() - 1;
-                TNode::new(current, is_end)
-            });
+        for current in word.chars() {
+            let next_node = node
+                .children
+                .entry(current)
+                .or_insert_with(|| TNode::new(current, false));
 
             node = next_node;
         }
+
+        node.is_end = true;
     }
 
     pub fn insert(&mut self, word: &str) {
+        if word.is_empty() {
+            return;
+        }
+
         let node = &mut self.root;
         let word = word.chars();
         Trie::insert_rec(node, word);
@@ -73,21 +83,17 @@ impl Trie {
     }
 
     pub fn contains(&mut self, word: &str) -> bool {
-        let mut node = &mut self.root;
+        let mut node = &self.root;
 
-        for (i, current) in word.chars().enumerate() {
-            if let Some(next_node) = node.children.get_mut(&current) {
-                if next_node.is_end && i == word.len() - 1 {
-                    return true;
-                }
-
+        for current in word.chars() {
+            if let Some(next_node) = node.children.get(&current) {
                 node = next_node;
             } else {
                 return false;
             }
         }
 
-        return false;
+        node.is_end
     }
 
     pub fn delete(&mut self, word: &str) {
@@ -119,7 +125,7 @@ impl Trie {
             return false;
         }
 
-        let next = node.get(&current).unwrap();
+        let next = node.get_mut(&current).unwrap();
 
         if Self::delete_rec(next, word, depth + 1) {
             node.children.remove(&current);
@@ -131,27 +137,43 @@ impl Trie {
 
         false
     }
+
+    pub fn clear(&mut self) {
+        self.root.children.clear();
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    const WORDS: [&'static str; 7] = ["coal", "cat", "cin", "catch", "cut", "cit", "camp"];
+
     #[test]
     fn integration_test() {
         let mut trie = Trie::new();
-        let words = ["coal", "cat", "cin", "catch", "cut", "cit", "cap"];
-        for w in words.iter() {
-            trie.insert(*w);
+        assert_eq!(trie.root.is_end, false);
+
+        trie.insert("");
+
+        assert_eq!(trie.contains("\0"), false);
+        assert_eq!(trie.root.is_end, false);
+
+        for (i, w) in WORDS.iter().enumerate() {
+            if i % 2 == 0 {
+                trie.insert(*w);
+            } else {
+                trie.insert_iter(*w);
+            }
         }
 
-        for w in words.iter() {
+        for w in WORDS.iter() {
             assert!(trie.contains(*w), "should contain \"{}\"", &w);
         }
 
-        assert!(!trie.contains("ca"), "shouldn't contain \"co\"");
-        assert!(!trie.contains("ci"), "shouldn't contain \"worm\"");
-        assert!(!trie.contains("co"), "shouldn't contain \"co\"");
+        assert_eq!(trie.contains("ca"), false, "shouldn't contain \"ca\"");
+        assert_eq!(trie.contains("ci"), false, "shouldn't contain \"ci\"");
+        assert_eq!(trie.contains("co"), false, "shouldn't contain \"co\"");
 
         // println!("{:#?}", trie.root);
 
@@ -161,29 +183,14 @@ mod tests {
 
         trie.delete("coal");
         assert_eq!(trie.contains("coal"), false);
-        trie.delete("coal");
+        assert_eq!(trie.contains("cut"), true);
+        assert_eq!(trie.contains("catch"), true);
 
+        trie.clear();
+
+        for w in WORDS.iter() {
+            assert_eq!(trie.contains(*w), false);
+        }
         // println!("{:#?}", trie.root);
-    }
-
-    #[test]
-    fn insert_iter_test() {
-        let mut trie = Trie::new();
-        let words = ["coal", "cat", "cam", "calm", "cut", "camp"];
-        for w in words.iter() {
-            trie.insert_iter(*w);
-        }
-
-        for w in words.iter() {
-            assert!(trie.contains(*w), "should contain \"{}\"", &w);
-        }
-
-        trie.delete("cat");
-        assert_eq!(trie.contains("cat"), false);
-        assert_eq!(trie.contains("calm"), true);
-
-        trie.delete("camp");
-        assert_eq!(trie.contains("camp"), false);
-        assert_eq!(trie.contains("calm"), true);
     }
 }
